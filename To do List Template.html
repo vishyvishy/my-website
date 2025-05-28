@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List App</title>
+  <style>
+    :root {
+      --bg: #181a20;
+      --card: #23262f;
+      --accent: #4f8cff;
+      --accent2: #1abc9c;
+      --text: #f5f6fa;
+      --muted: #7f8fa6;
+      --border: #353b48;
+      --done: #27ae60;
+      --radius: 16px;
+      --shadow: 0 4px 24px 0 #0006;
+    }
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      min-height: 100vh;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      min-height: 100vh;
+      padding: 0 8px 32px 8px;
+    }
+    .container {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-top: 32px;
+      padding: 32px 24px 24px 24px;
+      width: 100%;
+      max-width: 800px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .project-name {
+      font-size: 2rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 24px;
+      color: var(--accent);
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      border-radius: var(--radius);
+      padding: 8px 0;
+      transition: background 0.2s;
+    }
+    .project-name:focus {
+      background: var(--border);
+    }
+    .add-task-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      justify-content: center;
+    }
+    .add-task-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: var(--bg);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      margin-right: 8px;
+      box-shadow: 0 2px 8px #0002;
+      transition: background 0.2s;
+    }
+    .add-task-input:focus {
+      background: var(--border);
+    }
+    .add-task-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+      box-shadow: 0 2px 8px #0002;
+    }
+    .add-task-btn:hover {
+      background: var(--accent2);
+    }
+    .todo-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .task-row {
+      display: flex;
+      align-items: center;
+      padding: 6px 0 6px 0;
+      border-radius: 8px;
+      margin-bottom: 2px;
+      transition: background 0.15s;
+      position: relative;
+      cursor: pointer;
+    }
+    .task-row.highlighted {
+      background: #2d3a4a;
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      margin-right: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: border 0.2s, background 0.2s;
+    }
+    .checkbox.checked {
+      border: 2px solid var(--done);
+      background: var(--done);
+    }
+    .checkbox svg {
+      display: none;
+    }
+    .checkbox.checked svg {
+      display: block;
+      color: #fff;
+    }
+    .task-text {
+      flex: 1;
+      font-size: 1.08rem;
+      color: var(--text);
+      transition: color 0.2s;
+      user-select: text;
+      word-break: break-word;
+    }
+    .task-row.done .task-text {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+    .task-row.done .checkbox {
+      border: 2px solid var(--done);
+      background: var(--done);
+    }
+    .subtasks {
+      margin-left: 32px;
+      margin-top: 2px;
+      border-left: 2px solid var(--border);
+      padding-left: 12px;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 16px 4px 12px 4px;
+        min-width: 0;
+      }
+      .project-name {
+        font-size: 1.2rem;
+      }
+    }
+    .delete-btn svg {
+      pointer-events: none;
+    }
+    .delete-btn:hover svg path {
+      stroke: #ff2222;
+    }
+    .task-row.drag-over { background: #3a4a5a !important; }
+    .task-row.dragging { opacity: 0.5; }
+    .task-row.selected { outline: 2px solid var(--accent2); background: #2a3a3a !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 8px; gap: 8px;">
+      <select id="fontSelector" title="Select Font" style="background: var(--border); color: var(--text); border: none; border-radius: 8px; padding: 6px 12px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">
+        <option value="Bookman Old Style">Bookman Old Style</option>
+        <option value="Rockwell" selected>Rockwell (Default)</option>
+        <option value="MV Boli">MV Boli</option>
+        <option value="Harlow Solid Italic">Harlow Solid Italic</option>
+        <option value="Gill Sans MT Condensed">Gill Sans MT Condensed</option>
+        <option value="Bubblegum Sans">Bubblegum Sans</option>
+        <option value="Swsrpc">Swsrpc</option>
+        <option value="Swsrps">Swsrps</option>
+        <option value="Courier Std">Courier Std</option>
+      </select>
+      <button id="resetBtn" title="Reset all tasks" style="background: var(--border); color: var(--text); border: none; border-radius: 8px; padding: 6px 16px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Reset</button>
+      <button id="copyWhatsappBtn" title="Copy as WhatsApp message" style="background: var(--accent2); color: #fff; border: none; border-radius: 8px; padding: 6px 16px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Copy for WhatsApp</button>
+      <button id="copyOpmlBtn" title="Copy as OPML" style="background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 16px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Copy OPML</button>
+      <button id="copyExcelBtn" title="Copy for Excel" style="background: #28a745; color: #fff; border: none; border-radius: 8px; padding: 6px 16px; font-size: 1rem; cursor: pointer; transition: background 0.2s;">Copy for Excel</button>
+    </div>
+    <input class="project-name" id="projectName" value="My Project" maxlength="60" />
+    <div class="add-task-row">
+      <input class="add-task-input" id="addTaskInput" placeholder="Add a new task and press Enter..." maxlength="100" />
+      <button class="add-task-btn" id="addTaskBtn" title="Add Task">+</button>
+    </div>
+    <ul class="todo-list" id="todoList"></ul>
+  </div>
+  <script>
+    // --- Data Model ---
+    let tasks = [];
+    let highlighted = null; // [taskIndex, ...subtaskIndexes]
+    let addSubtaskMode = false;
+    let selectedTasks = []; // Array of paths (arrays) for multi-select
+    let undoStack = [];
+    let undoStackLimit = 50;
+
+    // --- DOM Elements ---
+    const todoList = document.getElementById('todoList');
+    const addTaskInput = document.getElementById('addTaskInput');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const projectName = document.getElementById('projectName');
+
+    // --- Utility Functions ---
+    function createTask(text) {
+      return { text, done: false, subtasks: [] };
+    }
+    function getTaskByPath(path) {
+      let node = tasks;
+      let parent = null;
+      let idx = null;
+      for (let i = 0; i < path.length; i++) {
+        parent = node;
+        idx = path[i];
+        node = node[idx].subtasks;
+      }
+      return { parent, idx, node: parent[idx] };
+    }
+    function getTaskNode(path) {
+      let node = tasks;
+      for (let i = 0; i < path.length; i++) {
+        node = node[path[i]].subtasks;
+      }
+      return node;
+    }
+    function setHighlight(path) {
+      highlighted = path;
+      render();
+      scrollToHighlighted();
+    }
+    function scrollToHighlighted() {
+      setTimeout(() => {
+        const el = document.querySelector('.task-row.highlighted');
+        if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 50);
+    }
+    // --- Render ---
+    function render() {
+      todoList.innerHTML = '';
+      renderTasks(tasks, [], todoList);
+    }
+    function renderTasks(taskArr, path, parentEl) {
+      taskArr.forEach((task, idx) => {
+        let thisPath = path.concat(idx);
+        const row = document.createElement('li');
+        row.className = 'task-row' + (task.done ? ' done' : '') + (isHighlighted(thisPath) ? ' highlighted' : '') + (isSelected(thisPath) ? ' selected' : '');
+        row.tabIndex = 0;
+        row.onclick = e => {
+          handleRowClick(e, thisPath);
+          e.stopPropagation();
+        };
+        row.onkeydown = e => handleTaskKey(e, thisPath);
+        row.ondblclick = e => {
+          setHighlight(thisPath);
+          showRenameInputForTask(thisPath);
+          e.stopPropagation();
+        };
+        // --- Drag and Drop ---
+        row.draggable = true;
+        row.ondragstart = e => {
+          e.dataTransfer.effectAllowed = 'move';
+          let dragPaths = getTopLevelSelectedPaths(thisPath);
+          e.dataTransfer.setData('text/plain', JSON.stringify(dragPaths));
+          row.classList.add('dragging');
+        };
+        row.ondragend = e => {
+          row.classList.remove('dragging');
+        };
+        row.ondragover = e => {
+          e.preventDefault();
+          row.classList.add('drag-over');
+        };
+        row.ondragleave = e => {
+          row.classList.remove('drag-over');
+        };
+        row.ondrop = e => {
+          e.preventDefault();
+          row.classList.remove('drag-over');
+          let data = e.dataTransfer.getData('text/plain');
+          if (isLikelyLink(data)) {
+            addHyperlinkToTask(thisPath, data.trim());
+            return;
+          }
+          const fromPaths = JSON.parse(data);
+          const toPath = thisPath;
+          if (Array.isArray(fromPaths)) {
+            if (e.offsetY > row.offsetHeight * 0.25 && e.offsetY < row.offsetHeight * 0.75) {
+              moveMultipleTasksAsChildren(fromPaths, toPath);
+            } else {
+              moveMultipleTasksAsSiblings(fromPaths, toPath);
+            }
+          }
+        };
+        // Checkbox
+        const checkbox = document.createElement('span');
+        checkbox.className = 'checkbox' + (task.done ? ' checked' : '');
+        checkbox.onclick = e => {
+          task.done = !task.done;
+          render();
+          e.stopPropagation();
+        };
+        if (task.done) {
+          checkbox.innerHTML = `<svg width="16" height="16" viewBox="0 0 20 20"><polyline points="4,11 9,16 16,6" stroke="white" stroke-width="2.5" fill="none"/></svg>`;
+        }
+        row.appendChild(checkbox);
+        // Task text or hyperlink
+        const text = document.createElement('span');
+        text.className = 'task-text';
+        if (task.link) {
+          if (isLocalPath(task.link)) {
+            // Local file/folder: show as link + copy button + tooltip
+            let fileUrl = task.link.startsWith('file://') ? task.link : 'file:///' + task.link.replace(/\\/g, '/').replace(/:/, ':/');
+            text.innerHTML = `<a href="#" style="color:var(--accent2);text-decoration:underline;" title="Open in Explorer">${task.text}</a>`;
+            // Open in Explorer on click
+            text.querySelector('a').onclick = (e) => {
+              e.preventDefault();
+              try {
+                window.open(fileUrl);
+              } catch (err) {}
+            };
+            // Copy Path button
+            const copyBtn = document.createElement('button');
+            copyBtn.textContent = '📋';
+            copyBtn.title = 'Copy path to clipboard';
+            copyBtn.style.marginLeft = '8px';
+            copyBtn.style.background = 'none';
+            copyBtn.style.border = 'none';
+            copyBtn.style.cursor = 'pointer';
+            copyBtn.onclick = (e) => {
+              e.stopPropagation();
+              navigator.clipboard.writeText(task.link);
+              copyBtn.title = 'Copied!';
+              setTimeout(() => { copyBtn.title = 'Copy path to clipboard'; }, 1200);
+            };
+            text.appendChild(copyBtn);
+            // Tooltip
+            text.title = 'If not opening in Explorer, copy and paste this path into Windows Explorer.';
+          } else {
+            // Web link
+            text.innerHTML = `<a href="${task.link}" target="_blank" style="color:var(--accent2);text-decoration:underline;">${task.text}</a>`;
+          }
+        } else {
+          text.textContent = task.text;
+        }
+        text.ondblclick = e => {
+          setHighlight(thisPath);
+          showRenameInputForTask(thisPath);
+          e.stopPropagation();
+        };
+        row.appendChild(text);
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.title = 'Delete task';
+        delBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 20 20"><path d="M6 6 L14 14 M14 6 L6 14" stroke="#ff4f4f" stroke-width="2.2" stroke-linecap="round"/></svg>`;
+        delBtn.onclick = e => {
+          e.stopPropagation();
+          handleDeleteTask(thisPath, task.subtasks && task.subtasks.length > 0);
+        };
+        delBtn.style.background = 'none';
+        delBtn.style.border = 'none';
+        delBtn.style.marginLeft = '8px';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.padding = '2px';
+        delBtn.style.display = 'flex';
+        delBtn.style.alignItems = 'center';
+        row.appendChild(delBtn);
+        parentEl.appendChild(row);
+        // Subtasks
+        if (task.subtasks && task.subtasks.length > 0) {
+          const subUl = document.createElement('ul');
+          subUl.className = 'subtasks';
+          renderTasks(task.subtasks, thisPath, subUl);
+          parentEl.appendChild(subUl);
+        }
+      });
+    }
+    function isHighlighted(path) {
+      if (!highlighted) return false;
+      if (highlighted.length !== path.length) return false;
+      for (let i = 0; i < path.length; i++) if (highlighted[i] !== path[i]) return false;
+      return true;
+    }
+    // --- Add Task ---
+    function addTask(text) {
+      if (!text.trim()) return;
+      pushUndo();
+      tasks.push(createTask(text.trim()));
+      render();
+      addTaskInput.value = '';
+      setHighlight([tasks.length - 1]);
+    }
+    addTaskBtn.onclick = () => addTask(addTaskInput.value);
+    addTaskInput.onkeydown = e => {
+      if (e.key === 'Enter') {
+        addTask(addTaskInput.value);
+      }
+    };
+    // --- Keyboard Navigation & Subtasks ---
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (
+        document.activeElement === addTaskInput ||
+        document.activeElement === projectName ||
+        (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('add-task-input'))
+      ) return;
+      if (!tasks.length) return;
+      if (!highlighted) setHighlight([0]);
+      else {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          moveHighlight(1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          moveHighlight(-1);
+        } else if (e.key === 'Insert') {
+          e.preventDefault();
+          if (!addSubtaskMode) {
+            addSubtaskMode = true;
+            showSubtaskInput();
+          }
+        } else if (e.key === ' ') {
+          e.preventDefault();
+          toggleDone(highlighted);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (!addSubtaskMode) {
+            addSiblingTaskInput();
+          }
+        } else if (e.key === 'F2') {
+          e.preventDefault();
+          if (highlighted) {
+            showRenameInputForTask(highlighted);
+          }
+        } else if (e.key === 'Delete') {
+          if (selectedTasks.length > 0) {
+            // Use the first selected node for confirmation
+            let node = tasks;
+            let path = selectedTasks[0];
+            for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+            let hasChildren = node[path[path.length - 1]] && node[path[path.length - 1]].subtasks && node[path[path.length - 1]].subtasks.length > 0;
+            handleDeleteTask(path, hasChildren);
+          } else if (highlighted) {
+            let node = tasks;
+            let path = highlighted;
+            for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+            let hasChildren = node[path[path.length - 1]] && node[path[path.length - 1]].subtasks && node[path[path.length - 1]].subtasks.length > 0;
+            handleDeleteTask(path, hasChildren);
+          }
+        }
+      }
+    });
+    function moveHighlight(dir) {
+      if (!highlighted) return;
+      let flat = flattenTasks(tasks);
+      let idx = flat.findIndex(f => isSamePath(f.path, highlighted));
+      if (idx === -1) return;
+      let next = flat[idx + dir];
+      if (next) setHighlight(next.path);
+    }
+    function isSamePath(a, b) {
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    }
+    function flattenTasks(arr, path = []) {
+      let out = [];
+      arr.forEach((t, i) => {
+        out.push({ path: path.concat(i), task: t });
+        if (t.subtasks && t.subtasks.length) {
+          out = out.concat(flattenTasks(t.subtasks, path.concat(i)));
+        }
+      });
+      return out;
+    }
+    function toggleDone(path) {
+      let node = tasks;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+      let t = node[path[path.length - 1]];
+      t.done = !t.done;
+      render();
+    }
+    // --- Add Subtask ---
+    function showSubtaskInput() {
+      if (!highlighted) return;
+      let row = document.querySelector('.task-row.highlighted');
+      if (!row) return;
+      let input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'add-task-input';
+      input.placeholder = 'Add subtask and press Enter...';
+      input.maxLength = 100;
+      input.style.marginLeft = '36px';
+      let inputActive = true;
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          if (input.value.trim()) {
+            addSubtaskAndContinue(input.value);
+            e.preventDefault();
+          }
+        } else if (e.key === 'Escape') {
+          inputActive = false;
+          cancelSubtaskInput();
+        }
+      };
+      input.onblur = () => {
+        if (inputActive) cancelSubtaskInput();
+      };
+      row.parentNode.insertBefore(input, row.nextSibling);
+      input.focus();
+    }
+    function addSubtaskAndContinue(text) {
+      if (!text.trim()) return;
+      pushUndo();
+      let node = tasks;
+      for (let i = 0; i < highlighted.length - 1; i++) node = node[highlighted[i]].subtasks;
+      let t = node[highlighted[highlighted.length - 1]];
+      t.subtasks.push(createTask(text.trim()));
+      render();
+      setTimeout(() => {
+        addSubtaskMode = true;
+        setHighlight(highlighted);
+        showSubtaskInput();
+      }, 0);
+    }
+    function cancelSubtaskInput() {
+      addSubtaskMode = false;
+      render();
+    }
+    // --- Project Name Persistence ---
+    projectName.oninput = () => {
+      pushUndo();
+      localStorage.setItem('todo_project_name', projectName.value);
+    };
+    // --- Save/Load ---
+    function save() {
+      localStorage.setItem('todo_tasks', JSON.stringify(tasks));
+    }
+    function load() {
+      let t = localStorage.getItem('todo_tasks');
+      if (t) tasks = JSON.parse(t);
+      let pn = localStorage.getItem('todo_project_name');
+      if (pn) projectName.value = pn;
+    }
+    setInterval(save, 1000);
+    // --- Initial ---
+    load();
+    render();
+    // --- Click outside to clear highlight ---
+    document.body.onclick = e => {
+      if (!e.target.closest('.task-row')) {
+        highlighted = null;
+        selectedTasks = [];
+        render();
+      }
+    };
+    function addSiblingTaskInput() {
+      if (!highlighted) return;
+      let parent = tasks;
+      let idx = highlighted[0];
+      let path = highlighted.slice();
+      if (highlighted.length > 1) {
+        parent = tasks;
+        for (let i = 0; i < highlighted.length - 1; i++) {
+          parent = parent[highlighted[i]].subtasks;
+        }
+        idx = highlighted[highlighted.length - 1];
+      }
+      // Insert a placeholder task after the current one
+      parent.splice(idx + 1, 0, createTask(''));
+      render();
+      // Highlight the new task
+      let newPath = path.slice(0, -1).concat(idx + 1);
+      setHighlight(newPath);
+      showEditInputForTask(newPath);
+    }
+    function showEditInputForTask(path) {
+      // Find the row for the given path
+      let selector = '.task-row';
+      let allRows = Array.from(document.querySelectorAll(selector));
+      let flat = flattenTasks(tasks);
+      let idx = flat.findIndex(f => isSamePath(f.path, path));
+      if (idx === -1) return;
+      let row = allRows[idx];
+      if (!row) return;
+      let input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'add-task-input';
+      input.placeholder = 'Enter task...';
+      input.maxLength = 100;
+      // Fix: Link input value to the new task's text property
+      let node = tasks;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+      let task = node[path[path.length - 1]];
+      input.value = task.text || '';
+      input.style.marginLeft = '36px';
+      let inputActive = true;
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          if (input.value.trim()) {
+            updateTaskText(path, input.value);
+            inputActive = false;
+            input.blur();
+          }
+        } else if (e.key === 'Escape') {
+          inputActive = false;
+          // Remove the placeholder task if left empty
+          removeTaskAtPath(path);
+        }
+      };
+      input.onblur = () => {
+        if (inputActive) {
+          // If the input is left empty, remove the placeholder task
+          if (!input.value.trim()) {
+            removeTaskAtPath(path);
+          } else {
+            updateTaskText(path, input.value);
+          }
+        }
+      };
+      row.parentNode.insertBefore(input, row.nextSibling);
+      input.focus();
+      input.select();
+    }
+    function updateTaskText(path, text) {
+      pushUndo();
+      let node = tasks;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+      node[path[path.length - 1]].text = text.trim();
+      render();
+      setHighlight(path);
+    }
+    function removeTaskAtPath(path) {
+      pushUndo();
+      let node = tasks;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+      node.splice(path[path.length - 1], 1);
+      render();
+      if (path[path.length - 1] > 0) {
+        setHighlight(path.slice(0, -1).concat(path[path.length - 1] - 1));
+      } else {
+        setHighlight(path.slice(0, -1));
+      }
+    }
+    // --- Delete Task Logic ---
+    function handleDeleteTask(path, hasChildren) {
+      // If multiple nodes are selected and this is one of them, delete all selected
+      if (selectedTasks.length > 1 && isSelected(path)) {
+        let count = selectedTasks.length;
+        if (!confirm(`Delete ${count} selected tasks and all their subtasks?`)) return;
+        if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+        deleteMultipleTasks(selectedTasks);
+        return;
+      }
+      if (hasChildren) {
+        if (!confirm('This task has subtasks. Are you sure you want to delete it and all its subtasks?')) return;
+        if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+      } else {
+        if (!confirm('Delete this task?')) return;
+      }
+      removeTaskAtPath(path);
+    }
+    // --- Delete Multiple Tasks ---
+    function deleteMultipleTasks(paths) {
+      pushUndo();
+      // Only delete top-level selected nodes (not descendants of other selected nodes)
+      let topPaths = paths.filter(sel => !paths.some(other => isAncestorPath(other, sel) && !isSamePath(other, sel)));
+      // Sort so we delete from the end
+      topPaths = topPaths.slice().sort((a, b) => {
+        for (let i = 0; i < Math.min(a.length, b.length); i++) {
+          if (a[i] !== b[i]) return b[i] - a[i];
+        }
+        return b.length - a.length;
+      });
+      topPaths.forEach(path => {
+        let node = tasks;
+        for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+        node.splice(path[path.length - 1], 1);
+      });
+      render();
+      selectedTasks = [];
+      highlighted = null;
+    }
+    // --- Reset Button Logic ---
+    document.getElementById('resetBtn').onclick = () => {
+      if (!confirm('Are you sure you want to reset all tasks and project name?')) return;
+      if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+      pushUndo();
+      tasks = [];
+      projectName.value = '';
+      localStorage.removeItem('todo_tasks');
+      localStorage.removeItem('todo_project_name');
+      render();
+    };
+    // --- Copy for WhatsApp ---
+    document.getElementById('copyWhatsappBtn').onclick = () => {
+      if (!tasks.length) {
+        alert('No tasks to copy!');
+        return;
+      }
+      let project = projectName.value.trim() || 'Project';
+      // Show all main tasks as children of the project name
+      let msg = project + '\n' + whatsappTreeDir(tasks, 1, [false]);
+      copyTextToClipboard(msg);
+      alert('Todo list copied for WhatsApp!');
+    };
+    // Directory-style tree for WhatsApp (main tasks as children of project)
+    function whatsappTreeDir(arr, level, parentLastArr) {
+      let out = '';
+      arr.forEach((t, idx) => {
+        let isLast = idx === arr.length - 1;
+        let prefix = '';
+        for (let i = 1; i < level; i++) {
+          prefix += parentLastArr[i] ? '    ' : '│   ';
+        }
+        prefix += (level === 0 ? '' : (isLast ? '└─ ' : '├─ '));
+        let status = t.done ? '✅' : '⬜';
+        out += prefix + status + ' ' + t.text + '\n';
+        if (t.subtasks && t.subtasks.length) {
+          out += whatsappTreeDir(t.subtasks, level + 1, parentLastArr.concat(isLast));
+        }
+      });
+      return out;
+    }
+    function copyTextToClipboard(text) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+      } else {
+        // fallback
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+    }
+    // --- Show Rename Input for Task ---
+    function showRenameInputForTask(path) {
+      // Find the row for the given path
+      let selector = '.task-text';
+      let allRows = Array.from(document.querySelectorAll(selector));
+      let flat = flattenTasks(tasks);
+      let idx = flat.findIndex(f => isSamePath(f.path, path));
+      if (idx === -1) return;
+      let row = allRows[idx];
+      if (!row) return;
+      let input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'add-task-input';
+      input.placeholder = 'Rename task...';
+      input.maxLength = 100;
+      // Link input value to the task's text property
+      let node = tasks;
+      for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+      let task = node[path[path.length - 1]];
+      input.value = task.text || '';
+      input.style.marginLeft = '36px';
+      let inputActive = true;
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          if (input.value.trim()) {
+            updateTaskText(path, input.value);
+            inputActive = false;
+            input.blur();
+          }
+        } else if (e.key === 'Escape') {
+          inputActive = false;
+          render();
+          setHighlight(path);
+        }
+      };
+      input.onblur = () => {
+        if (inputActive) {
+          if (input.value.trim()) {
+            updateTaskText(path, input.value);
+          } else {
+            render();
+            setHighlight(path);
+          }
+        }
+      };
+      row.parentNode.insertBefore(input, row.nextSibling);
+      input.focus();
+      input.select();
+    }
+    // --- Move Task (for drag-and-drop) ---
+    function moveTask(fromPath, toPath) {
+      // Remove the task from its original location
+      let fromNode = tasks;
+      for (let i = 0; i < fromPath.length - 1; i++) fromNode = fromNode[fromPath[i]].subtasks;
+      const [movedTask] = fromNode.splice(fromPath[fromPath.length - 1], 1);
+      // Adjust toPath if needed (if moving down in the same parent, index shifts)
+      let toNode = tasks;
+      for (let i = 0; i < toPath.length - 1; i++) toNode = toNode[toPath[i]].subtasks;
+      let insertIdx = toPath[toPath.length - 1];
+      // If fromNode === toNode and from index < to index, adjust insertIdx
+      if (fromNode === toNode && fromPath[fromPath.length - 1] < insertIdx) {
+        insertIdx--;
+      }
+      toNode.splice(insertIdx, 0, movedTask);
+      render();
+      setHighlight(toPath);
+    }
+    // --- Multi-select logic ---
+    function isSelected(path) {
+      return selectedTasks.some(sel => isSamePath(sel, path));
+    }
+    function handleRowClick(e, path) {
+      if (e.ctrlKey || e.metaKey) {
+        // Toggle selection
+        let idx = selectedTasks.findIndex(sel => isSamePath(sel, path));
+        if (idx !== -1) {
+          selectedTasks.splice(idx, 1);
+        } else {
+          selectedTasks.push(path);
+        }
+        setHighlight(path);
+        render();
+      } else if (e.shiftKey && selectedTasks.length > 0) {
+        // Range select (only at same level)
+        let last = selectedTasks[selectedTasks.length - 1];
+        if (last.length === path.length && last.slice(0, -1).every((v, i) => v === path[i])) {
+          let parent = tasks;
+          for (let i = 0; i < path.length - 1; i++) parent = parent[path[i]].subtasks;
+          let start = Math.min(last[last.length - 1], path[path.length - 1]);
+          let end = Math.max(last[last.length - 1], path[path.length - 1]);
+          for (let i = start; i <= end; i++) {
+            let p = path.slice(0, -1).concat(i);
+            if (!selectedTasks.some(sel => isSamePath(sel, p))) selectedTasks.push(p);
+          }
+          setHighlight(path);
+          render();
+        } else {
+          // Fallback to single select
+          selectedTasks = [path];
+          setHighlight(path);
+          render();
+        }
+      } else {
+        // Single select
+        selectedTasks = [path];
+        setHighlight(path);
+        render();
+      }
+    }
+    function getSelectedWithChildren() {
+      // For each selected path, include all its children (flattened)
+      let all = [];
+      selectedTasks.forEach(path => {
+        let node = tasks;
+        for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+        let task = node[path[path.length - 1]];
+        all.push(path);
+        function addChildren(t, p) {
+          if (t.subtasks && t.subtasks.length) {
+            t.subtasks.forEach((st, i) => {
+              let childPath = p.concat(i);
+              all.push(childPath);
+              addChildren(st, childPath);
+            });
+          }
+        }
+        addChildren(task, path);
+      });
+      // Remove duplicates
+      return all.filter((p, idx, arr) => arr.findIndex(q => isSamePath(p, q)) === idx);
+    }
+    // --- Move Multiple Tasks (for drag-and-drop) ---
+    function moveMultipleTasks(fromPaths, toPath) {
+      // Sort fromPaths so we remove from the end to avoid index shifting
+      fromPaths = fromPaths.slice().sort((a, b) => {
+        for (let i = 0; i < Math.min(a.length, b.length); i++) {
+          if (a[i] !== b[i]) return b[i] - a[i];
+        }
+        return b.length - a.length;
+      });
+      // Remove all fromPaths, collect moved tasks
+      let moved = [];
+      fromPaths.forEach(path => {
+        let node = tasks;
+        for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+        moved.push(node.splice(path[path.length - 1], 1)[0]);
+      });
+      // Insert at toPath
+      let toNode = tasks;
+      for (let i = 0; i < toPath.length - 1; i++) toNode = toNode[toPath[i]].subtasks;
+      let insertIdx = toPath[toPath.length - 1];
+      toNode.splice(insertIdx, 0, ...moved);
+      render();
+      // Update selectedTasks to new locations
+      selectedTasks = moved.map((_, i) => toPath.slice(0, -1).concat(insertIdx + i));
+      setHighlight(selectedTasks[0]);
+    }
+    // --- Only move top-level selected nodes (not descendants of other selected nodes) ---
+    function getTopLevelSelectedPaths(currentPath) {
+      // If this row is not selected, only drag this one
+      if (!isSelected(currentPath)) return [currentPath];
+      // Only top-level (not descendant of another selected)
+      return selectedTasks.filter(sel => !selectedTasks.some(other => isAncestorPath(other, sel) && !isSamePath(other, sel)));
+    }
+    function isAncestorPath(ancestor, desc) {
+      if (ancestor.length >= desc.length) return false;
+      for (let i = 0; i < ancestor.length; i++) if (ancestor[i] !== desc[i]) return false;
+      return true;
+    }
+    // --- Move as siblings (default drop) ---
+    function moveMultipleTasksAsSiblings(fromPaths, toPath) {
+      pushUndo();
+      // Only move top-level paths
+      fromPaths = fromPaths.filter(path => !fromPaths.some(other => isAncestorPath(other, path)));
+      // Sort fromPaths so we remove from the end to avoid index shifting
+      fromPaths = fromPaths.slice().sort((a, b) => {
+        for (let i = 0; i < Math.min(a.length, b.length); i++) {
+          if (a[i] !== b[i]) return b[i] - a[i];
+        }
+        return b.length - a.length;
+      });
+      // Remove all fromPaths, collect moved tasks
+      let moved = [];
+      fromPaths.forEach(path => {
+        let node = tasks;
+        for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+        moved.push(node.splice(path[path.length - 1], 1)[0]);
+      });
+      // Insert at toPath
+      let toNode = tasks;
+      for (let i = 0; i < toPath.length - 1; i++) toNode = toNode[toPath[i]].subtasks;
+      let insertIdx = toPath[toPath.length - 1];
+      toNode.splice(insertIdx, 0, ...moved);
+      render();
+      // Update selectedTasks to new locations
+      selectedTasks = moved.map((_, i) => toPath.slice(0, -1).concat(insertIdx + i));
+      setHighlight(selectedTasks[0]);
+    }
+    // --- Move as children (drop ON a node) ---
+    function moveMultipleTasksAsChildren(fromPaths, toPath) {
+      pushUndo();
+      // Only move top-level paths
+      fromPaths = fromPaths.filter(path => !fromPaths.some(other => isAncestorPath(other, path)));
+      // Remove all fromPaths, collect moved tasks
+      let moved = [];
+      fromPaths = fromPaths.slice().sort((a, b) => {
+        for (let i = 0; i < Math.min(a.length, b.length); i++) {
+          if (a[i] !== b[i]) return b[i] - a[i];
+        }
+        return b.length - a.length;
+      });
+      fromPaths.forEach(path => {
+        let node = tasks;
+        for (let i = 0; i < path.length - 1; i++) node = node[path[i]].subtasks;
+        moved.push(node.splice(path[path.length - 1], 1)[0]);
+      });
+      // Insert as children of toPath
+      let toNode = tasks;
+      for (let i = 0; i < toPath.length; i++) toNode = toNode[toPath[i]].subtasks;
+      toNode.push(...moved);
+      render();
+      // Update selectedTasks to new locations (as last children)
+      selectedTasks = moved.map((_, i) => toPath.concat(toNode.length - moved.length + i));
+      setHighlight(selectedTasks[0]);
+    }
+    function pushUndo() {
+      // Save a deep copy of tasks and projectName
+      undoStack.push({
+        tasks: JSON.parse(JSON.stringify(tasks)),
+        projectName: projectName.value
+      });
+      if (undoStack.length > undoStackLimit) undoStack.shift();
+    }
+    function undo() {
+      if (undoStack.length === 0) return;
+      const last = undoStack.pop();
+      tasks = JSON.parse(JSON.stringify(last.tasks));
+      projectName.value = last.projectName;
+      render();
+    }
+    // --- Improved Hyperlink detection utility ---
+    function isLikelyLink(text) {
+      // Match URLs, file URLs, UNC paths, and Windows drive paths
+      text = text.trim();
+      return (
+        /^(https?:\/\/|file:\/\/|\\\\|[a-zA-Z]:\\|[a-zA-Z]:\/|www\.)/.test(text) ||
+        /^[a-zA-Z]:\\[^\\/:*?"<>|]+/.test(text)
+      );
+    }
+    function getNextLinkName(task) {
+      let n = 1;
+      let base = 'Link';
+      let names = (task.subtasks || []).map(st => st.text);
+      while (names.includes(base + n)) n++;
+      return base + n;
+    }
+    // --- Add hyperlink as child ---
+    function addHyperlinkToTask(path, url) {
+      pushUndo();
+      let node = tasks;
+      for (let i = 0; i < path.length; i++) node = node[path[i]].subtasks;
+      let parentTask = node;
+      // If path is empty, add to root
+      if (path.length === 0) parentTask = tasks;
+      let linkName = getNextLinkName(parentTask.length ? parentTask[parentTask.length - 1] : {subtasks:[]});
+      parentTask.push({ text: linkName, done: false, subtasks: [], link: url });
+      render();
+      setHighlight(path.concat(parentTask.length - 1));
+    }
+    // --- Paste (Ctrl+V) support for links ---
+    document.addEventListener('paste', e => {
+      // Only handle if not focused in an input or textarea
+      if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+      let text = (e.clipboardData || window.clipboardData).getData('text');
+      // --- Excel/Sheets tabular paste support ---
+      if (/\t/.test(text) && /\n/.test(text)) {
+        e.preventDefault();
+        pasteExcelTableAsTasks(text);
+        return;
+      }
+      if (isLikelyLink(text)) {
+        if (highlighted) {
+          addHyperlinkToTask(highlighted, text.trim());
+          e.preventDefault();
+        } else {
+          addHyperlinkToTask([], text.trim());
+          e.preventDefault();
+        }
+      }
+    });
+    function isLocalPath(link) {
+      // Windows local path or file:/// or \\server
+      return /^(file:\/\/|[a-zA-Z]:\\|\\\\)/.test(link);
+    }
+    // --- Excel/Sheets Table Paste Logic ---
+    function pasteExcelTableAsTasks(text) {
+      // Split into rows
+      let rows = text.split(/\r?\n/).filter(r => r.trim().length > 0);
+      let parents = [];
+      let lastParent = null;
+      rows.forEach(row => {
+        let cells = row.split('\t');
+        let first = cells[0].trim();
+        let children = cells.slice(1).map(c => c.trim()).filter(Boolean);
+        if (first) {
+          // New parent
+          let parentTask = createTask(first);
+          parentTask.subtasks = children.map(c => createTask(c));
+          parents.push(parentTask);
+          lastParent = parentTask;
+        } else if (lastParent && children.length > 0) {
+          // Add as children to last parent
+          lastParent.subtasks.push(...children.map(c => createTask(c)));
+        }
+      });
+      // Add to tasks
+      pushUndo();
+      parents.forEach(parentTask => tasks.push(parentTask));
+      render();
+      setHighlight([tasks.length - 1]);
+    }
+    // --- Font Selector Logic ---
+    const fontSelector = document.getElementById('fontSelector');
+    const fontList = [
+      'Bookman Old Style',
+      'Rockwell',
+      'MV Boli',
+      'Harlow Solid Italic',
+      'Gill Sans MT Condensed',
+      'Bubblegum Sans',
+      'Swsrpc',
+      'Swsrps',
+      'Courier Std'
+    ];
+    const fontFallbacks = {
+      'Bookman Old Style': 'Bookman, serif',
+      'Rockwell': 'Rockwell, serif',
+      'MV Boli': 'MV Boli, cursive',
+      'Harlow Solid Italic': 'Harlow Solid Italic, cursive',
+      'Gill Sans MT Condensed': 'Gill Sans MT Condensed, Gill Sans, sans-serif',
+      'Bubblegum Sans': 'Bubblegum Sans, cursive',
+      'Swsrpc': 'Swsrpc, sans-serif',
+      'Swsrps': 'Swsrps, sans-serif',
+      'Courier Std': 'Courier Std, Courier, monospace'
+    };
+    function applyFont(font) {
+      const fallback = fontFallbacks[font] || 'sans-serif';
+      document.body.style.fontFamily = fallback;
+    }
+    // Load font from localStorage
+    const savedFont = localStorage.getItem('todo_font_family');
+    if (savedFont && fontList.includes(savedFont)) {
+      fontSelector.value = savedFont;
+      applyFont(savedFont);
+    } else {
+      fontSelector.value = 'Rockwell';
+      applyFont('Rockwell');
+    }
+    fontSelector.onchange = function() {
+      const font = fontSelector.value;
+      applyFont(font);
+      localStorage.setItem('todo_font_family', font);
+    };
+    // Keyboard shortcut: Ctrl+Shift+F to cycle fonts
+    document.addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        let idx = fontList.indexOf(fontSelector.value);
+        idx = (idx + 1) % fontList.length;
+        fontSelector.value = fontList[idx];
+        fontSelector.onchange();
+      }
+    });
+    // --- Copy for OPML ---
+    document.getElementById('copyOpmlBtn').onclick = () => {
+      if (!tasks.length) {
+        alert('No tasks to copy!');
+        return;
+      }
+      let project = projectName.value.trim() || 'My Project';
+      let opml = generateOpml(project, tasks);
+      copyTextToClipboard(opml);
+      alert('Todo list copied as OPML!');
+    };
+    function generateOpml(title, taskList) {
+      let now = new Date().toUTCString();
+      let opml = `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head>
+    <title>${escapeXml(title)}</title>
+    <dateCreated>${now}</dateCreated>
+    <dateModified>${now}</dateModified>
+  </head>
+  <body>
+${generateOpmlOutlines(taskList, 4)}
+  </body>
+</opml>`;
+      return opml;
+    }
+    function generateOpmlOutlines(taskArray, indent) {
+      let spaces = ' '.repeat(indent);
+      let result = '';
+      taskArray.forEach(task => {
+        let status = task.done ? ' [DONE]' : '';
+        let text = escapeXml(task.text + status);
+        if (task.subtasks && task.subtasks.length > 0) {
+          result += `${spaces}<outline text="${text}">\n`;
+          result += generateOpmlOutlines(task.subtasks, indent + 2);
+          result += `${spaces}</outline>\n`;
+        } else {
+          result += `${spaces}<outline text="${text}" />\n`;
+        }
+      });
+      return result;
+    }
+    function escapeXml(text) {
+      return text.replace(/&/g, '&amp;')
+                 .replace(/</g, '&lt;')
+                 .replace(/>/g, '&gt;')
+                 .replace(/"/g, '&quot;')
+                 .replace(/'/g, '&#39;');
+    }
+    // --- Copy for Excel ---
+    document.getElementById('copyExcelBtn').onclick = () => {
+      if (!tasks.length) {
+        alert('No tasks to copy!');
+        return;
+      }
+      let excelData = generateExcelFormat(tasks);
+      copyTextToClipboard(excelData);
+      alert('Todo list copied for Excel! Paste into Excel to preserve hierarchy.');
+    };
+    function generateExcelFormat(taskArray, level = 0) {
+      let result = '';
+      taskArray.forEach(task => {
+        let row = [];
+        // Add empty cells for indentation
+        for (let i = 0; i < level; i++) {
+          row.push('');
+        }
+        // Add task text with status
+        let taskText = task.text;
+        if (task.done) {
+          taskText += ' ✓';
+        }
+        row.push(taskText);
+        // Join with tabs and add newline
+        result += row.join('\t') + '\n';
+        // Add subtasks recursively
+        if (task.subtasks && task.subtasks.length > 0) {
+          result += generateExcelFormat(task.subtasks, level + 1);
+        }
+      });
+      return result;
+    }
+  </script>
+</body>
+</html> 
